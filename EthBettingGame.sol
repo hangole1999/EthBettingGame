@@ -5,8 +5,8 @@ pragma solidity ^0.4.24;
 contract EthBettingGame {
     
     // Variables
-    EthBettingGameCore public privateNetwork;
-    address public owner;
+    EthBettingGameCore internal privateNetwork;
+    address internal owner;
     
     // Mapping
     mapping(address => uint) public userIds;
@@ -32,26 +32,22 @@ contract EthBettingGame {
     }
     
     // Events
-    event _CallbackSetPlayer(uint userId, address msgSender);
-    event SetPlayer(bytes32 _userName, bytes32 _comment, address msgSender);
-    event Winner(bytes32 winnerName);
+    event onCallbackSetPlayer(uint userId, address msgSender);
+    event onSetPlayer(bytes32 _userName, bytes32 _comment, address msgSender);
+    event onWinner(bytes32 winnerName);
     
     // Getters
     function getUser(uint _id) public view returns(address) {
         return(idUsers[_id]);
     }
     
-    function getOwner() public view returns(address) {
-        return privateNetwork.owner();
-    }
-    
     // Setters
-    function setprivateNetwork(address _address) public onlyOwner() {
+    function setPrivateNetwork(address _address) public onlyOwner() {
         privateNetwork = EthBettingGameCore(_address);
     }
     
     // Public Interfaces
-    function setPlayer(bytes32 _userName, bytes32 _comment) public payable {
+    function setPlayer(bytes32 _userName, bytes32 _comment) public {
         privateNetwork.setPlayer(_userName, _comment, msg.sender);
     }
     
@@ -70,12 +66,12 @@ contract EthBettingGame {
     function _callbackSetPlayer(uint _userId, address _msgSender) public {
         userIds[_msgSender] = _userId;
         idUsers[_userId] = _msgSender;
-        emit _CallbackSetPlayer(_userId, _msgSender);
+        emit onCallbackSetPlayer(_userId, _msgSender);
     }
     
     function _callbackBettingGame(bool _result, uint _winnerId, bytes32 _winnerName) public payable {
         if(_result){
-            emit Winner(_winnerName);
+            emit onWinner(_winnerName);
             idUsers[_winnerId].transfer(betAmount[_winnerId]*2);
         }
     }
@@ -109,21 +105,25 @@ contract EthBettingGameCore {
     }
     
     // Variables
+    address internal owner;
     EthBettingGame internal publicNetwork;
-    address public owner;
     
     mapping (uint => Player) public playerM;
-    mapping (uint => Game) private gameM;
+    mapping (uint => Game) public gameM;
     mapping (uint => GameHistory) public gameHistoryM;
     
-    uint private playerIdCount = 0;
-    uint private gameIdCount = 0;
-    uint private gameHistoryIdCount = 0;
+    uint internal playerIdCount;
+    uint internal gameIdCount;
+    uint internal gameHistoryIdCount;
     
     // Constructor
     constructor(address _address) public {
         owner = msg.sender;
         publicNetwork = EthBettingGame(_address);
+        
+        playerIdCount = 0;
+        gameIdCount = 0;
+        gameHistoryIdCount = 0;
     }
     
     // Modifier
@@ -140,11 +140,11 @@ contract EthBettingGameCore {
     }
     
     // Events
-    event SetPlayer(bytes32 userName, bytes32 comment);
-    event SetComment(bytes32 userName, bytes32 comment);
-    event CreateGame(uint gameId);
-    event BettingGame(uint gameId, bytes32 userName, uint betNumber);
-    event Winner(uint gameId, bytes32 userName);
+    event onSetPlayer(bytes32 userName, bytes32 comment);
+    event onSetComment(bytes32 userName, bytes32 comment);
+    event onCreateGame(uint gameId);
+    event onBettingGame(uint gameId, bytes32 userName, uint betNumber);
+    event onWinner(uint gameId, bytes32 userName);
     
     // Interfaces
     function setPlayer(bytes32 _userName, bytes32 _comment, address _msgSender) public {
@@ -156,9 +156,9 @@ contract EthBettingGameCore {
             comment: _comment
         });
         
-        emit SetPlayer(_userName, _comment);
+        emit onSetPlayer(_userName, _comment);
         
-        publicNetwork._callbackSetPlayer(playerIdCount, _msgSender);
+        publicNetwork._callbackSetPlayer(0, _msgSender);
     }
     
     function setComment(uint _playerId, bytes32 _comment) public returns (uint) {
@@ -219,7 +219,7 @@ contract EthBettingGameCore {
         
         gameM[gameId].randomNumber = uint(block.blockhash(block.number-1)) % gameM[gameId].gamePlayerLength + 1;
         
-        emit CreateGame(gameId);
+        emit onCreateGame(gameId);
         
         return (gameId);
     }
