@@ -94,7 +94,6 @@ contract EthBettingGameCore {
         mapping (uint => uint) playerIdM;
         mapping(uint => uint) betNumberM;
         uint playerCount;
-        uint betNumberCount;
         uint256 randomNumber;
         uint gamePlayerLength;
     }
@@ -105,8 +104,8 @@ contract EthBettingGameCore {
     }
     
     // Variables
-    address internal owner;
     EthBettingGame internal publicNetwork;
+    address internal owner;
     
     mapping (uint => Player) public playerM;
     mapping (uint => Game) public gameM;
@@ -183,6 +182,8 @@ contract EthBettingGameCore {
             publicNetwork._callbackBettingGame(false, 0, 0x00);
         }
         
+        emit onBettingGame(_gameId, playerM[_playerId].userName, _betNumber);
+        
         return (result, winnerId);
     }
     
@@ -201,6 +202,8 @@ contract EthBettingGameCore {
         
         publicNetwork._callbackBettingGame(true, winnerId, winnerName);
         
+        emit onWinner(_gameId, winnerName);
+        
         return (winnerId);
     }
     
@@ -212,12 +215,11 @@ contract EthBettingGameCore {
         gameM[gameId] = Game({
             gameId: gameId,
             playerCount: 0,
-            betNumberCount: 0,
             randomNumber: 0,
             gamePlayerLength: gamePlayerLength
         });
         
-        gameM[gameId].randomNumber = uint(block.blockhash(block.number-1)) % gameM[gameId].gamePlayerLength + 1;
+        gameM[gameId].randomNumber = (uint(block.blockhash(block.number-1)) % gameM[gameId].gamePlayerLength) + 1;
         
         emit onCreateGame(gameId);
         
